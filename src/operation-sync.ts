@@ -3,25 +3,25 @@ import * as ObjectHash from 'object-hash'
 
 export type TransformsData = Readonly<any> | string
 export type OperationTransform<S> = (snap: S, data?: TransformsData) => S | Promise<S>
-export type Transforms<S> = { [s:string]: OperationTransform<S> }
+export interface Transforms<S> { [s: string]: OperationTransform<S> }
 export interface Operation {
-  action: string,
-  data?: Readonly<any>,
-  timestamp: number,
-  hash: string,
+  action: string
+  data?: Readonly<any>
+  timestamp: number
+  hash: string
 }
 export type OperationOption = {
-  action: string,
-  data?: any,
-  timestamp?: number,
+  action: string
+  data?: any
+  timestamp?: number
 } | string
-export type SnapshotCache<S> = { [hast: string]: Readonly<S> }
+export interface SnapshotCache<S> { [hast: string]: Readonly<S> }
 
 
 export default class OperationSync<S> {
 
   base: Readonly<S>
-  baseHash: String
+  baseHash: string
   operations: Operation[]
   transforms: Transforms<S>
   cache: SnapshotCache<S> 
@@ -34,17 +34,17 @@ export default class OperationSync<S> {
     this.cache = {}
   }
 
-  objectHash(object:any) {
+  objectHash(object: any) {
     return ObjectHash.sha1(object)
   }
 
   processOperations(operations: OperationOption[]): Operation[] {
-    return operations.map(operation=>{
+    return operations.map(operation => {
       if (typeof operation === 'string') {
         return {
           action: operation,
           timestamp: + new Date(),
-          hash: this.objectHash({  action: operation })
+          hash: this.objectHash({ action: operation }),
         }
       }
       else {
@@ -52,7 +52,7 @@ export default class OperationSync<S> {
           action: operation.action,
           data: Object.freeze(operation.data),
           timestamp: operation.timestamp || + new Date(),
-          hash: this.objectHash({  action: operation.action, data: operation.data })
+          hash: this.objectHash({ action: operation.action, data: operation.data }),
         }
       }
     })
@@ -68,10 +68,10 @@ export default class OperationSync<S> {
   }
 
   treeHash(operationIndex: number) {
-    const operationHashes = this.operations.slice(0, operationIndex).map(op=>op.hash)
+    const operationHashes = this.operations.slice(0, operationIndex).map(op => op.hash)
     return this.objectHash({ 
       baseHash: this.baseHash,
-      operations: operationHashes 
+      operations: operationHashes, 
     })
   }
 
@@ -96,9 +96,9 @@ export default class OperationSync<S> {
       const transform = this.transforms[operation.action](cloneDeep(snap), operation.data)
       const result = await Promise.resolve(transform)
       const hash = this.treeHash(index + 1)
-      if (saveCache) {
+      if (saveCache) 
         this.cache[hash] = Object.freeze(result)
-      }
+      
       snap = result
     }
     return snap

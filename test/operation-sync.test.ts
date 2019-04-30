@@ -1,8 +1,8 @@
-import OperationSync, { Transforms } from "../src/operation-sync"
+import OperationSync, { Transforms } from '../src/operation-sync'
 
 let transformCount = 0
 
-type Snap = {
+interface Snap {
   name: string
 }
 
@@ -27,20 +27,20 @@ const transforms: Transforms<Snap> = {
     transformCount += 1
     snap.name = data+ snap.name
     return snap
-  }
+  },
 }
 
-describe("demo", () => {
+describe('demo', () => {
 
-  it("no operation", async () => {
-    const snap = { name: 'hello' } as Snap
+  it('no operation', async () => {
+    const snap: Snap = { name: 'hello' } 
     const ops = new OperationSync<Snap>(snap, transforms)
     expect(await ops.eval()).toEqual(snap)
   })
 
-  it("basic", async () => {
+  it('basic', async () => {
  
-    const snap = { name: 'hello' } as Snap
+    const snap: Snap = { name: 'hello' }
     
     const ops = new OperationSync<Snap>(snap, transforms, [{ action: 'upper' }])
 
@@ -50,15 +50,15 @@ describe("demo", () => {
     // should be immutable
     expect(snap).toEqual({ name: 'hello' })
 
-    ops.insertOperation({ action:'lower' })
+    ops.insertOperation({ action: 'lower' })
     expect(await ops.eval()).toEqual({ name: 'hello' })
 
-    ops.insertOperation({ action:'slice', data: [1] })
+    ops.insertOperation({ action: 'slice', data: [1] })
     expect(await ops.eval()).toEqual({ name: 'ello' })
   })
 
-  it('string transform', async()=>{
-    const snap = { name: 'hello' } as Snap
+  it('string transform', async() => {
+    const snap: Snap = { name: 'hello' } 
 
     const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
 
@@ -69,7 +69,7 @@ describe("demo", () => {
   })
 
   it('cache on', async() => {
-    const snap = { name: 'hello' } as Snap
+    const snap: Snap = { name: 'hello' }
 
     transformCount = 0
     const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
@@ -100,7 +100,7 @@ describe("demo", () => {
   })
 
   it('cache off', async() => {
-    const snap = { name: 'hello' } as Snap
+    const snap: Snap = { name: 'hello' } 
 
     const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
 
@@ -115,7 +115,7 @@ describe("demo", () => {
   })
 
   it('order1', async() => {
-    const snap = { name: 'hello' } as Snap
+    const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
@@ -124,11 +124,11 @@ describe("demo", () => {
       { action: 'slice', data: [2] },
     ])
 
-    expect(await ops.eval()).toEqual({name: '3hello'})
+    expect(await ops.eval()).toEqual({ name: '3hello' })
   })
 
   it('order2', async() => {
-    const snap = { name: 'hello' } as Snap
+    const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
@@ -137,34 +137,34 @@ describe("demo", () => {
       { action: 'prepend', data: '123' },
     ])
 
-    expect(await ops.eval()).toEqual({name: '123llo'})
+    expect(await ops.eval()).toEqual({ name: '123llo' })
   })
 
   it('will sort by timestamp', async() => {
-    const snap = { name: 'hello' } as Snap
+    const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
     ops.insertOperations([
-      { action: 'slice', data: [2] , timestamp: 2},
+      { action: 'slice', data: [2], timestamp: 2 },
       { action: 'prepend', data: '123', timestamp: 1 },
     ])
 
-    expect(await ops.eval()).toEqual({name: '3hello'})
+    expect(await ops.eval()).toEqual({ name: '3hello' })
   })
 
   it('insert to head will not use cache', async() => {
-    const snap = { name: 'hello' } as Snap
+    const snap: Snap= { name: 'hello' } 
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
     ops.insertOperations([
-      { action: 'slice', data: [2] , timestamp: 3 },
+      { action: 'slice', data: [2], timestamp: 3 },
       { action: 'prepend', data: '123', timestamp: 2 },
     ])
 
     transformCount = 0
-    expect(await ops.eval()).toEqual({name: '3hello'})
+    expect(await ops.eval()).toEqual({ name: '3hello' })
     expect(transformCount).toBe(2)
 
     transformCount = 0

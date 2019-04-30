@@ -1,4 +1,4 @@
-import { cloneDeep, concat, sortBy } from 'lodash'
+import cloneDeep from 'lodash/cloneDeep'
 import * as ObjectHash from 'object-hash'
 
 export type TransformsData = Readonly<any> | string
@@ -64,7 +64,7 @@ export default class OperationSync<S> {
 
   insertOperations(operations: OperationOption[]) {
     const processed = this.processOperations(operations)
-    this.operations = sortBy(concat(this.operations, processed), 'timestamp')
+    this.operations = this.operations.concat(processed).sort((a,b) => a.timestamp - b.timestamp)
   }
 
   treeHash(operationIndex: number) {

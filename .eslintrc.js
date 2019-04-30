@@ -4,12 +4,15 @@ module.exports = {
     es6: true,
     browser: true,
     node: true,
+    jest: true,
   },
   plugins: [
+    'jest',
     '@typescript-eslint',
   ],
   parser: '@typescript-eslint/parser',
   extends: [
+    'standard',
     'plugin:@typescript-eslint/recommended'
   ],
   // add your custom rules here

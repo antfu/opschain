@@ -1,4 +1,4 @@
-import OperationSync, { Transforms, EvalTransforms, processOperations } from '../src/operation-sync'
+import OperationSync, { TransformFunctions, EvalTransforms, processOperations } from '../src/operation-sync'
 
 let transformCount = 0
 
@@ -6,43 +6,41 @@ interface Snap {
   name: string
 }
 
-const transforms: Transforms<Snap> = {
-  upper(snap) {
+const transforms: TransformFunctions<Snap> = {
+  upper (snap) {
     transformCount += 1
     snap.name = snap.name.toUpperCase()
     return snap
   },
-  lower (snap){
+  lower (snap) {
     transformCount += 1
     snap.name = snap.name.toLowerCase()
     return snap
   },
-  slice(snap, args){
+  slice (snap, args) {
     transformCount += 1
     const arg = args as number[]
     snap.name = snap.name.slice(...arg)
     return snap
   },
-  prepend(snap, data) {
+  prepend (snap, data) {
     transformCount += 1
-    snap.name = data+ snap.name
+    snap.name = data + snap.name
     return snap
   },
 }
 
 describe('demo', () => {
-
   it('no operation', async () => {
-    const snap: Snap = { name: 'hello' } 
+    const snap: Snap = { name: 'hello' }
     const ops = new OperationSync<Snap>(snap, transforms)
     expect(await ops.eval()).toEqual(snap)
   })
 
   it('basic', async () => {
- 
     const snap: Snap = { name: 'hello' }
-    
-    const ops = new OperationSync<Snap>(snap, transforms, [{ action: 'upper' }])
+
+    const ops = new OperationSync<Snap>(snap, transforms, [{ name: 'upper' }])
 
     expect(ops.objectHash(snap)).toEqual(ops.baseHash)
 
@@ -50,15 +48,15 @@ describe('demo', () => {
     // should be immutable
     expect(snap).toEqual({ name: 'hello' })
 
-    ops.insertOperation({ action: 'lower' })
+    ops.insertOperation({ name: 'lower' })
     expect(await ops.eval()).toEqual({ name: 'hello' })
 
-    ops.insertOperation({ action: 'slice', data: [1] })
+    ops.insertOperation({ name: 'slice', data: [1] })
     expect(await ops.eval()).toEqual({ name: 'ello' })
   })
 
-  it('string transform', async() => {
-    const snap: Snap = { name: 'hello' } 
+  it('string transform', async () => {
+    const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
 
@@ -68,7 +66,7 @@ describe('demo', () => {
     expect(await ops.eval()).toEqual({ name: 'hello' })
   })
 
-  it('cache on', async() => {
+  it('cache on', async () => {
     const snap: Snap = { name: 'hello' }
 
     transformCount = 0
@@ -99,8 +97,8 @@ describe('demo', () => {
     expect(transformCount).toEqual(2)
   })
 
-  it('cache off', async() => {
-    const snap: Snap = { name: 'hello' } 
+  it('cache off', async () => {
+    const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
 
@@ -114,53 +112,53 @@ describe('demo', () => {
     expect(transformCount).toEqual(1)
   })
 
-  it('order1', async() => {
+  it('order1', async () => {
     const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
     ops.insertOperations([
-      { action: 'prepend', data: '123' },
-      { action: 'slice', data: [2] },
+      { name: 'prepend', data: '123' },
+      { name: 'slice', data: [2] },
     ])
 
     expect(await ops.eval()).toEqual({ name: '3hello' })
   })
 
-  it('order2', async() => {
+  it('order2', async () => {
     const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
     ops.insertOperations([
-      { action: 'slice', data: [2] },
-      { action: 'prepend', data: '123' },
+      { name: 'slice', data: [2] },
+      { name: 'prepend', data: '123' },
     ])
 
     expect(await ops.eval()).toEqual({ name: '123llo' })
   })
 
-  it('will sort by timestamp', async() => {
+  it('will sort by timestamp', async () => {
     const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
     ops.insertOperations([
-      { action: 'slice', data: [2], timestamp: 2 },
-      { action: 'prepend', data: '123', timestamp: 1 },
+      { name: 'slice', data: [2], timestamp: 2 },
+      { name: 'prepend', data: '123', timestamp: 1 },
     ])
 
     expect(await ops.eval()).toEqual({ name: '3hello' })
   })
 
-  it('insert to head will not use cache', async() => {
-    const snap: Snap= { name: 'hello' } 
+  it('insert to head will not use cache', async () => {
+    const snap: Snap = { name: 'hello' }
 
     const ops = new OperationSync<Snap>(snap, transforms)
 
     ops.insertOperations([
-      { action: 'slice', data: [2], timestamp: 3 },
-      { action: 'prepend', data: '123', timestamp: 2 },
+      { name: 'slice', data: [2], timestamp: 3 },
+      { name: 'prepend', data: '123', timestamp: 2 },
     ])
 
     transformCount = 0
@@ -168,7 +166,7 @@ describe('demo', () => {
     expect(transformCount).toBe(2)
 
     transformCount = 0
-    ops.insertOperation({ action: 'upper', timestamp: 1 })
+    ops.insertOperation({ name: 'upper', timestamp: 1 })
     expect(await ops.eval()).toEqual({ name: '3HELLO' })
     expect(transformCount).toBe(3)
   })

@@ -18,6 +18,79 @@ export type OperationOption = {
 export interface SnapshotCache<S> { [hast: string]: Readonly<S> }
 
 
+export function TreeHash (
+  operations: Operation[], 
+  baseHash: string,
+  operationIndex: number,
+  hashFunction = ObjectHash.sha1,
+) {
+  const operationHashes = operations
+    .slice(0, operationIndex)
+    .map(op => op.hash)
+  return hashFunction({ 
+    baseHash,
+    operations: operationHashes, 
+  })
+}
+
+export async function EvalTransforms<S>(
+  base: S,
+  transforms: Transforms<S>,
+  operations: Operation[], 
+  hashFunction = ObjectHash.sha1,
+  cacheObject?: SnapshotCache<S>,
+) {
+ 
+  let snap = base
+  const baseHash = hashFunction(base)
+  let snapIndex = 0
+  const treeHash = (index: number) => TreeHash(operations, baseHash, index, hashFunction)
+  
+  if (cacheObject) {
+    // search revere
+    for (let index = operations.length; index >= 0 ; index -= 1 ) {
+      const hash = treeHash(index)
+      if (cacheObject[hash]) {
+        snap = cacheObject[hash]
+        snapIndex = index
+        break
+      }
+    }
+  }
+
+  for (let index = snapIndex; index < operations.length; index +=1 ) {
+    const operation = operations[index]
+    const transform = transforms[operation.action](cloneDeep(snap), operation.data)
+    const result = await Promise.resolve(transform)
+    const hash = treeHash(index + 1)
+    if (cacheObject) 
+      cacheObject[hash] = Object.freeze(result)
+    
+    snap = result
+  }
+  return snap
+}
+
+export function processOperations(operations: OperationOption[], hashFunction = ObjectHash.sha1): Operation[] {
+  return operations.map(operation => {
+    if (typeof operation === 'string') {
+      return {
+        action: operation,
+        timestamp: + new Date(),
+        hash: hashFunction({ action: operation }),
+      }
+    }
+    else {
+      return {
+        action: operation.action,
+        data: Object.freeze(operation.data),
+        timestamp: operation.timestamp || + new Date(),
+        hash: hashFunction({ action: operation.action, data: operation.data }),
+      }
+    }
+  })
+}
+
 export default class OperationSync<S> {
 
   base: Readonly<S>
@@ -30,7 +103,8 @@ export default class OperationSync<S> {
     this.base = Object.freeze(baseSnapshot)
     this.baseHash = this.objectHash(this.base)
     this.transforms = transforms
-    this.operations = this.processOperations(operations)
+    this.operations = []
+    this.insertOperations(operations)
     this.cache = {}
   }
 
@@ -38,70 +112,22 @@ export default class OperationSync<S> {
     return ObjectHash.sha1(object)
   }
 
-  processOperations(operations: OperationOption[]): Operation[] {
-    return operations.map(operation => {
-      if (typeof operation === 'string') {
-        return {
-          action: operation,
-          timestamp: + new Date(),
-          hash: this.objectHash({ action: operation }),
-        }
-      }
-      else {
-        return {
-          action: operation.action,
-          data: Object.freeze(operation.data),
-          timestamp: operation.timestamp || + new Date(),
-          hash: this.objectHash({ action: operation.action, data: operation.data }),
-        }
-      }
-    })
-  }
-
   insertOperation(operation: OperationOption) {
     this.insertOperations([operation])
   }
 
   insertOperations(operations: OperationOption[]) {
-    const processed = this.processOperations(operations)
+    const processed = processOperations(operations, this.objectHash)
     this.operations = this.operations.concat(processed).sort((a, b) => a.timestamp - b.timestamp)
   }
 
-  treeHash(operationIndex: number) {
-    const operationHashes = this.operations.slice(0, operationIndex).map(op => op.hash)
-    return this.objectHash({ 
-      baseHash: this.baseHash,
-      operations: operationHashes, 
-    })
+  async eval(cache = true) {
+    return await EvalTransforms(
+      this.base, 
+      this.transforms, 
+      this.operations, 
+      this.objectHash,
+      cache ? this.cache : undefined, 
+    )
   }
-
-  async eval({ useCache = true, saveCache = true }={}) {
-    let snap = this.base
-    let snapIndex = 0
-
-    if (useCache) {
-      // search revere
-      for (let index = this.operations.length; index >= 0 ; index -= 1 ) {
-        const hash = this.treeHash(index)
-        if (this.cache[hash]) {
-          snap = this.cache[hash]
-          snapIndex = index
-          break
-        }
-      }
-    }
-
-    for (let index = snapIndex; index < this.operations.length; index +=1 ) {
-      const operation = this.operations[index]
-      const transform = this.transforms[operation.action](cloneDeep(snap), operation.data)
-      const result = await Promise.resolve(transform)
-      const hash = this.treeHash(index + 1)
-      if (saveCache) 
-        this.cache[hash] = Object.freeze(result)
-      
-      snap = result
-    }
-    return snap
-  }
-
 }

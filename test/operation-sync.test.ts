@@ -1,4 +1,4 @@
-import OperationSync, { Transforms } from '../src/operation-sync'
+import OperationSync, { Transforms, EvalTransforms, processOperations } from '../src/operation-sync'
 
 let transformCount = 0
 
@@ -95,7 +95,7 @@ describe('demo', () => {
 
     transformCount = 0
     // should have same result without cache
-    expect(await ops.eval({ useCache: false })).toEqual(snap1)
+    expect(await ops.eval(false)).toEqual(snap1)
     expect(transformCount).toEqual(2)
   })
 
@@ -105,12 +105,12 @@ describe('demo', () => {
     const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
 
     transformCount = 0
-    await ops.eval({ saveCache: false })
+    await ops.eval(false)
     expect(transformCount).toEqual(1)
     expect(Object.keys(ops.cache)).toHaveLength(0)
 
     transformCount = 0
-    await ops.eval({ useCache: true, saveCache: false })
+    await ops.eval(false)
     expect(transformCount).toEqual(1)
   })
 
@@ -171,5 +171,15 @@ describe('demo', () => {
     ops.insertOperation({ action: 'upper', timestamp: 1 })
     expect(await ops.eval()).toEqual({ name: '3HELLO' })
     expect(transformCount).toBe(3)
+  })
+
+  it('functional', async () => {
+    const snap: Snap = { name: 'hello' }
+
+    const operations = processOperations(['upper'])
+    const result = await EvalTransforms<Snap>(snap, transforms, operations)
+
+    expect(snap).toEqual({ name: 'hello' })
+    expect(result).toEqual({ name: 'HELLO' })
   })
 })

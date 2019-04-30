@@ -1,25 +1,44 @@
-import OperationSync from "../src/operation-sync"
+import OperationSync, { Transforms } from "../src/operation-sync"
+
+type Snap = {
+  name: string
+}
+
+const transforms: Transforms<Snap> = {
+  upper(snap) {
+    snap.name = snap.name.toUpperCase()
+    return snap
+  },
+  lower (snap){
+    snap.name = snap.name.toLowerCase()
+    return snap
+  },
+  slice(snap, args){
+    const arg = args as number[]
+    snap.name = snap.name.slice(...arg)
+    return snap
+  }
+}
 
 describe("demo", () => {
   it("basic", async () => {
-    type Snap = {
-      name: string
-    }
+ 
     const snap = { name: 'hello' } as Snap
-
-    const ops = new OperationSync<Snap>(snap, {
-      upper(S) {
-        S.name = S.name.toUpperCase()
-        return S
-      }
-    }, [{
+    
+    const ops = new OperationSync<Snap>(snap, transforms, [{
       action: 'upper',
-      timestamp: +new Date(),
-      hash: '123124',
     }])
+
+    expect(ops.objectHash(snap)).toEqual(ops.baseHash)
 
     expect(await ops.eval()).toEqual({ name: 'HELLO' })
     // should be immutable
     expect(snap).toEqual({ name: 'hello' })
+
+    ops.insertOperation({ action:'lower' })
+    expect(await ops.eval()).toEqual({ name: 'hello' })
+
+    ops.insertOperation({ action:'slice', data: [1] })
+    expect(await ops.eval()).toEqual({ name: 'ello' })
   })
 })

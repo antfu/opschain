@@ -2,7 +2,7 @@ import cloneDeep from 'lodash/cloneDeep'
 import * as ObjectHash from 'object-hash'
 
 export type TransformsData = Readonly<any> | string
-export type TransformFunction<S> = (snap: S, data?: TransformsData) => S | Promise<S>
+export type TransformFunction<S> = (snap: S, data?: TransformsData) => S
 export interface TransformFunctions<S> { [s: string]: TransformFunction<S> }
 export interface TransOperation {
   name: string
@@ -32,7 +32,7 @@ export function TreeHash (
   })
 }
 
-export async function EvalTransforms<S> (
+export function EvalTransforms<S> (
   base: S,
   transforms: TransformFunctions<S>,
   operations: TransOperation[],
@@ -58,8 +58,7 @@ export async function EvalTransforms<S> (
 
   for (let index = snapIndex; index < operations.length; index += 1) {
     const operation = operations[index]
-    const transform = transforms[operation.name](cloneDeep(snap), operation.data)
-    const result = await Promise.resolve(transform)
+    const result = transforms[operation.name](cloneDeep(snap), operation.data)
     const hash = treeHash(index + 1)
     if (cacheObject)
       cacheObject[hash] = Object.freeze(result)
@@ -118,8 +117,8 @@ export default class OperationSync<S> {
     this.operations = this.operations.concat(processed).sort((a, b) => a.timestamp - b.timestamp)
   }
 
-  async eval (cache = true) {
-    return await EvalTransforms(
+  eval (cache = true) {
+    return EvalTransforms(
       this.base,
       this.transforms,
       this.operations,

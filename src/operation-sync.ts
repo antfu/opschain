@@ -64,7 +64,7 @@ export default class OperationSync<S> {
 
   insertOperations(operations: OperationOption[]) {
     const processed = this.processOperations(operations)
-    this.operations = this.operations.concat(processed).sort((a,b) => a.timestamp - b.timestamp)
+    this.operations = this.operations.concat(processed).sort((a, b) => a.timestamp - b.timestamp)
   }
 
   treeHash(operationIndex: number) {

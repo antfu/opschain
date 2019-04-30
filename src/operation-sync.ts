@@ -1,16 +1,15 @@
 import cloneDeep from 'lodash/cloneDeep'
 import * as ObjectHash from 'object-hash'
 
-export type TransformsData = Readonly<any> | string
-export type TransformFunction<S> = (snap: S, data?: TransformsData) => S
+export type TransformFunction<S> = (snap: S, data?: any) => S
 export interface TransformFunctions<S> { [s: string]: TransformFunction<S> }
 export interface TransOperation {
   name: string
-  data?: Readonly<any>
+  data?: any
   timestamp: number
   hash: string
 }
-export type OperationOption = {
+export type TransOperationOption = {
   name: string
   data?: any
   timestamp?: number
@@ -68,7 +67,7 @@ export function EvalTransforms<S> (
   return snap
 }
 
-export function processOperations (operations: OperationOption[], hashFunction = ObjectHash.sha1): TransOperation[] {
+export function ProcessOperations (operations: TransOperationOption[], hashFunction = ObjectHash.sha1): TransOperation[] {
   return operations.map(operation => {
     if (typeof operation === 'string') {
       return {
@@ -88,6 +87,10 @@ export function processOperations (operations: OperationOption[], hashFunction =
   })
 }
 
+export function ProcessOperation (operation: TransOperationOption, hashFunction = ObjectHash.sha1): TransOperation {
+  return ProcessOperations([operation])[0]
+}
+
 export default class OperationSync<S> {
   base: Readonly<S>
   baseHash: string
@@ -95,7 +98,7 @@ export default class OperationSync<S> {
   transforms: TransformFunctions<S>
   cache: SnapshotCache<S>
 
-  constructor (baseSnapshot: S, transforms: TransformFunctions<S>, operations: OperationOption[] = []) {
+  constructor (baseSnapshot: S, transforms: TransformFunctions<S>, operations: TransOperationOption[] = []) {
     this.base = Object.freeze(baseSnapshot)
     this.baseHash = this.objectHash(this.base)
     this.transforms = transforms
@@ -108,12 +111,12 @@ export default class OperationSync<S> {
     return ObjectHash.sha1(object)
   }
 
-  insertOperation (operation: OperationOption) {
+  insertOperation (operation: TransOperationOption) {
     this.insertOperations([operation])
   }
 
-  insertOperations (operations: OperationOption[]) {
-    const processed = processOperations(operations, this.objectHash)
+  insertOperations (operations: TransOperationOption[]) {
+    const processed = ProcessOperations(operations, this.objectHash)
     this.operations = this.operations.concat(processed).sort((a, b) => a.timestamp - b.timestamp)
   }
 

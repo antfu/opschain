@@ -1,4 +1,4 @@
-import OperationSync, { TransformFunctions, EvalTransforms, processOperations } from '../src/operation-sync'
+import OperationSync, { TransformFunctions, EvalTransforms, ProcessOperation } from '../src/operation-sync'
 
 let transformCount = 0
 
@@ -174,8 +174,8 @@ describe('demo', () => {
   it('functional', () => {
     const snap: Snap = { name: 'hello' }
 
-    const operations = processOperations(['upper'])
-    const result = EvalTransforms<Snap>(snap, transforms, operations)
+    const operation = ProcessOperation('upper')
+    const result = EvalTransforms<Snap>(snap, transforms, [operation])
 
     expect(snap).toEqual({ name: 'hello' })
     expect(result).toEqual({ name: 'HELLO' })

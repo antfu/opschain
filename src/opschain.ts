@@ -18,6 +18,12 @@ export interface SnapshotCache<S> {
   get(key: string): S
   set(key: string, snap: S, ttl?: number): void
 }
+export interface OpschainOption<S> {
+  hashFunction?(object: any): string
+  cacheObject?: SnapshotCache<S>
+  cacheTTL?: number
+  shouldCache?(operation: TransOperation, snap: S, previousSanp: S): boolean
+}
 
 export class BasicCache<S> implements SnapshotCache<S> {
   _cache: {[key: string]: S}
@@ -49,10 +55,18 @@ export function TreeHash (
 
 export function EvalTransforms<S> (
   transforms: TransformFunctions<S>,
-  hashFunction = ObjectHash.sha1,
-  cacheObject?: SnapshotCache<S>,
-  cacheTTL?: number
+  options?: OpschainOption<S>
 ) {
+  const {
+    hashFunction,
+    cacheObject,
+    cacheTTL,
+    shouldCache,
+  } = Object.assign({
+    hashFunction: ObjectHash.sha1,
+    shouldCache: () => true,
+  }, options || {})
+
   return (
     base: S,
     operations: TransOperation[],
@@ -78,7 +92,7 @@ export function EvalTransforms<S> (
       const operation = operations[index]
       const result = transforms[operation.name](cloneDeep(snap), operation.data)
       const hash = treeHash(index + 1)
-      if (cacheObject)
+      if (cacheObject && shouldCache(operation, result, snap))
         cacheObject.set(hash, Object.freeze(result), cacheTTL)
 
       snap = result
@@ -142,10 +156,10 @@ export default class OperationChain<S> {
 
   eval (cache = true) {
     return EvalTransforms(
-      this.transforms,
-      this.objectHash,
-      cache ? this.cache : undefined,
-    )(
+      this.transforms, {
+        hashFunction: this.objectHash,
+        cacheObject: cache ? this.cache : undefined,
+      })(
       this.base,
       this.operations,
     )

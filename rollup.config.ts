@@ -8,7 +8,7 @@ import json from 'rollup-plugin-json'
 /* eslint-disable  @typescript-eslint/no-var-requires */
 const pkg = require('./package.json')
 
-const libraryName = 'operation-sync'
+const libraryName = 'opschain'
 
 export default {
   input: `src/${libraryName}.ts`,

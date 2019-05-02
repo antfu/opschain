@@ -1,4 +1,4 @@
-import OperationSync, { TransformFunctions, EvalTransforms, ProcessOperation } from '../src/operation-sync'
+import OperationChain, { TransformFunctions, EvalTransforms, ProcessOperation } from '../src/opschain'
 
 let transformCount = 0
 
@@ -33,14 +33,14 @@ const transforms: TransformFunctions<Snap> = {
 describe('demo', () => {
   it('no operation', () => {
     const snap: Snap = { name: 'hello' }
-    const ops = new OperationSync<Snap>(snap, transforms)
+    const ops = new OperationChain<Snap>(snap, transforms)
     expect(ops.eval()).toEqual(snap)
   })
 
   it('basic', () => {
     const snap: Snap = { name: 'hello' }
 
-    const ops = new OperationSync<Snap>(snap, transforms, [{ name: 'upper' }])
+    const ops = new OperationChain<Snap>(snap, transforms, [{ name: 'upper' }])
 
     expect(ops.objectHash(snap)).toEqual(ops.baseHash)
 
@@ -58,7 +58,7 @@ describe('demo', () => {
   it('string transform', () => {
     const snap: Snap = { name: 'hello' }
 
-    const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
+    const ops = new OperationChain<Snap>(snap, transforms, ['upper'])
 
     expect(ops.eval()).toEqual({ name: 'HELLO' })
 
@@ -70,7 +70,7 @@ describe('demo', () => {
     const snap: Snap = { name: 'hello' }
 
     transformCount = 0
-    const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
+    const ops = new OperationChain<Snap>(snap, transforms, ['upper'])
 
     ops.eval()
     expect(transformCount).toEqual(1)
@@ -100,12 +100,11 @@ describe('demo', () => {
   it('cache off', () => {
     const snap: Snap = { name: 'hello' }
 
-    const ops = new OperationSync<Snap>(snap, transforms, ['upper'])
+    const ops = new OperationChain<Snap>(snap, transforms, ['upper'])
 
     transformCount = 0
     ops.eval(false)
     expect(transformCount).toEqual(1)
-    expect(Object.keys(ops.cache)).toHaveLength(0)
 
     transformCount = 0
     ops.eval(false)
@@ -115,7 +114,7 @@ describe('demo', () => {
   it('order1', () => {
     const snap: Snap = { name: 'hello' }
 
-    const ops = new OperationSync<Snap>(snap, transforms)
+    const ops = new OperationChain<Snap>(snap, transforms)
 
     ops.insertOperations([
       { name: 'prepend', data: '123' },
@@ -128,7 +127,7 @@ describe('demo', () => {
   it('order2', () => {
     const snap: Snap = { name: 'hello' }
 
-    const ops = new OperationSync<Snap>(snap, transforms)
+    const ops = new OperationChain<Snap>(snap, transforms)
 
     ops.insertOperations([
       { name: 'slice', data: [2] },
@@ -141,7 +140,7 @@ describe('demo', () => {
   it('will sort by timestamp', () => {
     const snap: Snap = { name: 'hello' }
 
-    const ops = new OperationSync<Snap>(snap, transforms)
+    const ops = new OperationChain<Snap>(snap, transforms)
 
     ops.insertOperations([
       { name: 'slice', data: [2], timestamp: 2 },
@@ -154,7 +153,7 @@ describe('demo', () => {
   it('insert to head will not use cache', () => {
     const snap: Snap = { name: 'hello' }
 
-    const ops = new OperationSync<Snap>(snap, transforms)
+    const ops = new OperationChain<Snap>(snap, transforms)
 
     ops.insertOperations([
       { name: 'slice', data: [2], timestamp: 3 },
@@ -175,7 +174,7 @@ describe('demo', () => {
     const snap: Snap = { name: 'hello' }
 
     const operation = ProcessOperation('upper')
-    const result = EvalTransforms<Snap>(snap, transforms, [operation])
+    const result = EvalTransforms<Snap>(transforms)(snap, [operation])
 
     expect(snap).toEqual({ name: 'hello' })
     expect(result).toEqual({ name: 'HELLO' })

@@ -1,11 +1,11 @@
 {
-  "name": "operation-sync",
+  "name": "opschain",
   "version": "0.2.4",
   "description": "",
   "keywords": [],
-  "main": "dist/operation-sync.umd.js",
-  "module": "dist/operation-sync.es5.js",
-  "typings": "dist/types/operation-sync.d.ts",
+  "main": "dist/opschain.umd.js",
+  "module": "dist/opschain.es5.js",
+  "typings": "dist/types/opschain.d.ts",
   "files": [
     "dist"
   ],

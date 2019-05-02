@@ -14,7 +14,23 @@ export type TransOperationOption = {
   data?: any
   timestamp?: number
 } | string
-export interface SnapshotCache<S> { [hast: string]: Readonly<S> }
+export interface SnapshotCache<S> {
+  get(key: string): S
+  set(key: string, snap: S, ttl?: number): void
+}
+
+export class BasicCache<S> implements SnapshotCache<S> {
+  _cache: {[key: string]: S}
+  constructor (cache: {[key: string]: S} = {}) {
+    this._cache = cache
+  }
+  get (key: string): S {
+    return this._cache[key]
+  }
+  set (key: string, snap: S): void {
+    this._cache[key] = snap
+  }
+}
 
 export function TreeHash (
   operations: TransOperation[],
@@ -32,39 +48,43 @@ export function TreeHash (
 }
 
 export function EvalTransforms<S> (
-  base: S,
   transforms: TransformFunctions<S>,
-  operations: TransOperation[],
   hashFunction = ObjectHash.sha1,
   cacheObject?: SnapshotCache<S>,
+  cacheTTL?: number
 ) {
-  let snap = base
-  const baseHash = hashFunction(base)
-  let snapIndex = 0
-  const treeHash = (index: number) => TreeHash(operations, baseHash, index, hashFunction)
+  return (
+    base: S,
+    operations: TransOperation[],
+  ) => {
+    let snap = base
+    const baseHash = hashFunction(base)
+    let snapIndex = 0
+    const treeHash = (index: number) => TreeHash(operations, baseHash, index, hashFunction)
 
-  if (cacheObject) {
-    // search revere
-    for (let index = operations.length; index >= 0; index -= 1) {
-      const hash = treeHash(index)
-      if (cacheObject[hash]) {
-        snap = cacheObject[hash]
-        snapIndex = index
-        break
+    if (cacheObject) {
+      // search revere
+      for (let index = operations.length; index >= 0; index -= 1) {
+        const hash = treeHash(index)
+        if (cacheObject.get(hash)) {
+          snap = cacheObject.get(hash)
+          snapIndex = index
+          break
+        }
       }
     }
-  }
 
-  for (let index = snapIndex; index < operations.length; index += 1) {
-    const operation = operations[index]
-    const result = transforms[operation.name](cloneDeep(snap), operation.data)
-    const hash = treeHash(index + 1)
-    if (cacheObject)
-      cacheObject[hash] = Object.freeze(result)
+    for (let index = snapIndex; index < operations.length; index += 1) {
+      const operation = operations[index]
+      const result = transforms[operation.name](cloneDeep(snap), operation.data)
+      const hash = treeHash(index + 1)
+      if (cacheObject)
+        cacheObject.set(hash, Object.freeze(result), cacheTTL)
 
-    snap = result
+      snap = result
+    }
+    return snap
   }
-  return snap
 }
 
 export function ProcessOperations (operations: TransOperationOption[], hashFunction = ObjectHash.sha1): TransOperation[] {
@@ -91,7 +111,7 @@ export function ProcessOperation (operation: TransOperationOption, hashFunction 
   return ProcessOperations([operation])[0]
 }
 
-export default class OperationSync<S> {
+export default class OperationChain<S> {
   base: Readonly<S>
   baseHash: string
   operations: TransOperation[]
@@ -104,7 +124,7 @@ export default class OperationSync<S> {
     this.transforms = transforms
     this.operations = []
     this.insertOperations(operations)
-    this.cache = {}
+    this.cache = new BasicCache<S>()
   }
 
   objectHash (object: any) {
@@ -122,11 +142,12 @@ export default class OperationSync<S> {
 
   eval (cache = true) {
     return EvalTransforms(
-      this.base,
       this.transforms,
-      this.operations,
       this.objectHash,
       cache ? this.cache : undefined,
+    )(
+      this.base,
+      this.operations,
     )
   }
 }

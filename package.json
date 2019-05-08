@@ -1,6 +1,6 @@
 {
   "name": "opschain",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "description": "",
   "keywords": [],
   "main": "dist/opschain.umd.js",
@@ -19,11 +19,12 @@
     "node": ">=6.0.0"
   },
   "scripts": {
-    "lint": "eslint --ext .ts,.js --ignore-path .gitignore .",
     "prebuild": "rimraf dist",
+    "prepublish": "npm run build",
     "build": "tsc --module commonjs && rollup -c rollup.config.ts && typedoc --out docs --target es6 --theme minimal --mode file src",
     "start": "rollup -c rollup.config.ts -w",
     "test": "jest --coverage",
+    "lint": "eslint --ext .ts,.js --ignore-path .gitignore .",
     "test:watch": "jest --coverage --watch",
     "test:prod": "npm run lint && npm run test",
     "precommit": "npm run lint"

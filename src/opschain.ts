@@ -1,17 +1,19 @@
 import cloneDeep from 'lodash/cloneDeep'
 import * as ObjectHash from 'object-hash'
 
-export type TransformFunction<S> = (snap: S, data?: any) => S
+export type TransformFunction<S> = (snap: S, data?: any, meta?: any) => S
 export interface TransformFunctions<S> { [s: string]: TransformFunction<S> }
 export interface TransOperation {
   name: string
   data?: any
+  meta?: any
   timestamp: number
   hash: string
 }
 export type TransOperationOption = {
   name: string
   data?: any
+  meta?: any
   timestamp?: number
 } | string
 export interface SnapshotCache<S> {
@@ -77,7 +79,7 @@ export function EvalTransforms<S> (
     const treeHash = (index: number) => TreeHash(operations, baseHash, index, hashFunction)
 
     if (cacheObject) {
-      // search revere
+      // search reverse
       for (let index = operations.length; index >= 0; index -= 1) {
         const hash = treeHash(index)
         if (cacheObject.get(hash)) {
@@ -90,7 +92,7 @@ export function EvalTransforms<S> (
 
     for (let index = snapIndex; index < operations.length; index += 1) {
       const operation = operations[index]
-      const result = transforms[operation.name](cloneDeep(snap), operation.data)
+      const result = transforms[operation.name](cloneDeep(snap), operation.data, operation.meta)
       const hash = treeHash(index + 1)
       if (cacheObject && shouldCache(operation, result, snap))
         cacheObject.set(hash, Object.freeze(result), cacheTTL)
@@ -114,8 +116,9 @@ export function ProcessOperations (operations: TransOperationOption[], hashFunct
       return {
         name: operation.name,
         data: Object.freeze(operation.data),
+        meta: Object.freeze(operation.meta),
         timestamp: operation.timestamp || +new Date(),
-        hash: hashFunction({ action: operation.name, data: operation.data }),
+        hash: hashFunction({ action: operation.name, data: operation.data, meta: operation.meta }),
       }
     }
   })
